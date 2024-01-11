@@ -3,57 +3,73 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"net/http"
 	dictionary "projet1/directory/directories"
-	"sync"
+
+	"github.com/gorilla/mux"
 )
 
 func main() {
-	data, err := ioutil.ReadFile("donnees.json")
-	if err != nil {
-		fmt.Println("Erreur lors de la lecture du fichier JSON:", err)
-		return
-	}
-
-	var jsonData struct {
-		Data []map[string]string `json:"data"`
-	}
-
-	err = json.Unmarshal(data, &jsonData)
-	if err != nil {
-		fmt.Println("Erreur lors du décodage JSON:", err)
-		return
-	}
+	router := mux.NewRouter()
 
 	myDictionary := dictionary.NewDictionary()
 
-	var wg sync.WaitGroup
+	router.HandleFunc("/add", AddHandler(myDictionary)).Methods("POST")
 
-	wg.Add(2)
+	router.HandleFunc("/get/{word}", GetHandler(myDictionary)).Methods("GET")
 
-	go func() {
-		defer wg.Done()
-		for _, item := range jsonData.Data {
-			for word, definition := range item {
-				myDictionary.Add(word, definition)
-			}
+	router.HandleFunc("/remove/{word}", RemoveHandler(myDictionary)).Methods("DELETE")
+
+	router.HandleFunc("/list", ListHandler(myDictionary)).Methods("GET")
+
+	http.Handle("/", router)
+
+	http.ListenAndServe(":8080", nil)
+}
+
+func AddHandler(d *dictionary.Dictionary) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		var entry dictionary.Entry
+		err := json.NewDecoder(r.Body).Decode(&entry)
+		if err != nil {
+			http.Error(w, "Erreur de décodage JSON", http.StatusBadRequest)
+			return
 		}
-	}()
 
-	go func() {
-		defer wg.Done()
-		myDictionary.Remove("mathématique")
-	}()
+		d.Add(entry.Word, entry.Definition)
 
-	wg.Wait()
-
-	definition, err := myDictionary.Get("go")
-	if err != nil {
-		fmt.Println(err)
-	} else {
-		fmt.Printf("Définition de 'go': %s\n", definition)
+		w.WriteHeader(http.StatusCreated)
 	}
+}
 
-	fmt.Println("Liste des mots et définitions:")
-	myDictionary.List()
+func GetHandler(d *dictionary.Dictionary) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		word := mux.Vars(r)["word"]
+
+		definition, err := d.Get(word)
+		if err != nil {
+			http.Error(w, fmt.Sprintf("Mot non trouvé : %s", word), http.StatusNotFound)
+			return
+		}
+
+		json.NewEncoder(w).Encode(map[string]string{"word": word, "definition": definition})
+	}
+}
+
+func RemoveHandler(d *dictionary.Dictionary) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		word := mux.Vars(r)["word"]
+
+		d.Remove(word)
+
+		w.WriteHeader(http.StatusOK)
+	}
+}
+
+func ListHandler(d *dictionary.Dictionary) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		result := d.List()
+
+		w.Write([]byte(result))
+	}
 }

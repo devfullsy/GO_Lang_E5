@@ -5,6 +5,11 @@ import (
 	"sort"
 )
 
+type Entry struct {
+	Word       string `json:"word"`
+	Definition string `json:"definition"`
+}
+
 type Dictionary struct {
 	words         map[string]string
 	addChannel    chan addOperation
@@ -57,7 +62,7 @@ func (d *Dictionary) Get(word string) (string, error) {
 	return definition, nil
 }
 
-func (d *Dictionary) List() {
+func (d *Dictionary) List() string {
 	var words []string
 	for word := range d.words {
 		words = append(words, word)
@@ -65,7 +70,10 @@ func (d *Dictionary) List() {
 
 	sort.Strings(words)
 
+	var result string
 	for _, word := range words {
-		fmt.Printf("%s: %s\n", word, d.words[word])
+		result += fmt.Sprintf("%s: %s\n", word, d.words[word])
 	}
+
+	return result
 }
