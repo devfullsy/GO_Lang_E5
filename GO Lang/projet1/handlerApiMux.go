@@ -18,7 +18,11 @@ func AddHandler(d *dictionary.Dictionary) http.HandlerFunc {
 			return
 		}
 
-		d.Add(entry.Word, entry.Definition)
+		// Modification pour gérer les erreurs lors de l'ajout
+		if err := d.Add(entry.Word, entry.Definition); err != nil {
+			handleError(w, err)
+			return
+		}
 
 		w.WriteHeader(http.StatusCreated)
 	}
@@ -30,7 +34,7 @@ func GetHandler(d *dictionary.Dictionary) http.HandlerFunc {
 
 		definition, err := d.Get(word)
 		if err != nil {
-			http.Error(w, fmt.Sprintf("Mot non trouvé : %s", word), http.StatusNotFound)
+			handleError(w, err)
 			return
 		}
 
@@ -53,5 +57,17 @@ func ListHandler(d *dictionary.Dictionary) http.HandlerFunc {
 		result := d.List()
 
 		w.Write([]byte(result))
+	}
+}
+
+func handleError(w http.ResponseWriter, err error) {
+	switch err := err.(type) {
+	case *dictionary.NotFoundError:
+		http.Error(w, err.Error(), http.StatusNotFound)
+	case *dictionary.ValidationError:
+		http.Error(w, err.Error(), http.StatusBadRequest)
+	default:
+		fmt.Printf("Erreur interne: %v\n", err)
+		http.Error(w, "Erreur interne du serveur", http.StatusInternalServerError)
 	}
 }
