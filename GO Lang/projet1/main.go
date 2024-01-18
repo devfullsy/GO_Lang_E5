@@ -12,8 +12,8 @@ func main() {
 
 	myDictionary := dictionary.NewDictionary()
 
-	router.Use(LoggerMiddleware)
-	router.Use(AuthMiddleware)
+	router.Use(dictionary.LoggerMiddleware)
+	router.Use(dictionary.AuthMiddleware)
 
 	router.HandleFunc("/add", AddHandler(myDictionary)).Methods("POST")
 	router.HandleFunc("/get/{word}", GetHandler(myDictionary)).Methods("GET")
