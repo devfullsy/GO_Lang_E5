@@ -13,15 +13,11 @@ func main() {
 	myDictionary := dictionary.NewDictionary()
 
 	router.Use(LoggerMiddleware)
-
 	router.Use(AuthMiddleware)
 
 	router.HandleFunc("/add", AddHandler(myDictionary)).Methods("POST")
-
 	router.HandleFunc("/get/{word}", GetHandler(myDictionary)).Methods("GET")
-
 	router.HandleFunc("/remove/{word}", RemoveHandler(myDictionary)).Methods("DELETE")
-
 	router.HandleFunc("/list", ListHandler(myDictionary)).Methods("GET")
 
 	http.Handle("/", router)

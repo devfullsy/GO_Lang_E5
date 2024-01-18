@@ -18,7 +18,6 @@ func AddHandler(d *dictionary.Dictionary) http.HandlerFunc {
 			return
 		}
 
-		// Modification pour gérer les erreurs lors de l'ajout
 		if err := d.Add(entry.Word, entry.Definition); err != nil {
 			handleError(w, err)
 			return
